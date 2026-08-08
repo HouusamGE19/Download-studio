@@ -1,0 +1,213 @@
+<div class="ambient ambient-one"></div>
+<div class="ambient ambient-two"></div>
+
+<div class="app-shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Download Studio home">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 19h14"/></svg>
+      </span>
+      <span><strong>Download</strong><em>Studio</em></span>
+    </a>
+
+    <div class="topbar-actions">
+      <div class="connection-pill" [class.ready]="downloads.system()?.ready">
+        <span class="pulse-dot"></span>
+        {{ downloads.system()?.ready ? 'System ready' : (initializing() ? 'Checking system' : 'Needs attention') }}
+      </div>
+      <button class="icon-button" type="button" (click)="toggleTheme()" [attr.aria-label]="darkTheme() ? 'Use light theme' : 'Use dark theme'">
+        @if (darkTheme()) {
+          <svg viewBox="0 0 24 24"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg>
+        } @else {
+          <svg viewBox="0 0 24 24"><path d="M20.5 15.2A8.5 8.5 0 0 1 8.8 3.5 8.5 8.5 0 1 0 20.5 15.2Z"/></svg>
+        }
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow"><span></span>Your private download space</div>
+      <h1>Save what matters.<br><span>Beautifully simple.</span></h1>
+      <p>Videos and playlists in their best quality, saved automatically to your Downloads folder.</p>
+    </section>
+
+    @if (downloads.system(); as system) {
+      @if (!system.ready) {
+        <aside class="system-warning">
+          <svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 4.2 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></svg>
+          <div><strong>Setup needed</strong><span>{{ system.message }}</span></div>
+        </aside>
+      }
+    }
+
+    <section class="workspace-grid">
+      <article class="download-card glass-card">
+        <div class="card-heading">
+          <div>
+            <span class="step">01</span>
+            <h2>New download</h2>
+          </div>
+          <span class="privacy-badge">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            Ready
+          </span>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <label class="field-label" for="media-url">Video or playlist URL</label>
+          <div class="input-shell url-input" [class.invalid]="form.controls.url.invalid && form.controls.url.touched">
+            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>
+            <input id="media-url" formControlName="url" type="url" autocomplete="off" placeholder="https://youtube.com/watch?v=…">
+            <span class="detect-chip" [class.detected]="form.controls.url.value">{{ typeLabel(form.controls.url.value) }}</span>
+          </div>
+          @if (form.controls.url.invalid && form.controls.url.touched) {
+            <span class="field-error">A video or playlist link is required.</span>
+          }
+
+
+          <div class="fixed-destination">
+            <svg viewBox="0 0 24 24"><path d="M3 6.5h7l2 2h9v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-11Z"/></svg>
+            <div><strong>Downloads folder</strong><span>Files are saved to the downloads folder beside this application.</span></div>
+          </div>
+          <button class="primary-button" type="submit" [disabled]="submitting() || !downloads.system()?.ready">
+            @if (submitting()) {
+              <span class="spinner"></span>Adding to queue…
+            } @else {
+              <span>Start download</span>
+              <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+            }
+          </button>
+        </form>
+
+        <div class="assurance-row">
+          <span><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>Best quality</span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM8 3v4m8-4v4M8 11h.01M12 11h.01M16 11h.01"/></svg>Metadata included</span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10M12 6v6l4 2"/></svg>Resume enabled</span>
+        </div>
+      </article>
+
+      <aside class="activity-card glass-card">
+        <div class="card-heading activity-heading">
+          <div>
+            <span class="step">02</span>
+            <h2>Activity</h2>
+          </div>
+          @if (downloads.jobs().length) {
+            <button class="text-button" type="button" (click)="clearFinished()">Clear finished</button>
+          }
+        </div>
+
+        @if (initializing()) {
+          <div class="activity-empty loading-state">
+            <span class="spinner"></span>
+            <strong>Loading your studio</strong>
+          </div>
+        } @else if (!downloads.jobs().length) {
+          <div class="activity-empty">
+            <div class="empty-orbit">
+              <span></span>
+              <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            </div>
+            <strong>Your queue is clear</strong>
+            <p>Downloads and their live progress<br>will appear right here.</p>
+          </div>
+        } @else {
+          <div class="job-list">
+            @for (job of downloads.jobs(); track trackJob($index, job)) {
+              <button class="job-item" type="button" (click)="selectedJobId.set(job.id)">
+                <div class="job-icon" [class]="'job-icon ' + statusClass(job.status)">
+                  @if (job.status === 'COMPLETED') {
+                    <svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg>
+                  } @else if (job.status === 'FAILED' || job.status === 'CANCELED') {
+                    <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+                  } @else {
+                    <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+                  }
+                </div>
+                <div class="job-main">
+                  <div class="job-title-row">
+                    <strong>{{ job.title || 'Preparing download' }}</strong>
+                    <span class="status-tag" [class]="'status-tag ' + statusClass(job.status)">{{ statusLabel(job.status) }}</span>
+                  </div>
+                  <span class="job-path">Downloads folder</span>
+                  @if (!finished(job)) {
+                    <div class="progress-track" [class.indeterminate]="job.progress === 0 && job.status === 'DOWNLOADING'"><span [style.width.%]="job.progress"></span></div>
+                    <div class="progress-meta">
+                      <span>{{ job.progress | number:'1.0-1' }}%</span>
+                      <span>{{ job.speed }} @if (job.eta) { · {{ job.eta }} left }</span>
+                    </div>
+                  } @else {
+                    <div class="finished-meta">
+                      <span>{{ job.message }}</span>
+                      @if (job.status !== 'COMPLETED') {
+                        <button type="button" (click)="retry(job, $event)">Retry</button>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (!finished(job)) {
+                  <button class="cancel-button" type="button" aria-label="Cancel download" (click)="cancel(job, $event)">
+                    <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+                  </button>
+                }
+              </button>
+            }
+          </div>
+        }
+
+        <footer class="activity-footer">
+          <div><span class="live-dot" [class.connected]="downloads.connected()"></span>{{ downloads.connected() ? 'Live updates connected' : 'Reconnecting…' }}</div>
+          <span>{{ completedCount() }} completed</span>
+        </footer>
+      </aside>
+    </section>
+
+    <section class="mini-stats">
+      <div><span>Active queue</span><strong>{{ activeJobs().length | number:'2.0' }}</strong></div>
+      <div><span>Average progress</span><strong>{{ totalProgress() }}<small>%</small></strong></div>
+      <div><span>Finished</span><strong>{{ completedCount() | number:'2.0' }}</strong></div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <span>Download Studio</span>
+    <span>© 2026 Houssam ED. All Rights Reserved.</span>
+  </footer>
+</div>
+
+
+@if (selectedJob(); as job) {
+  <div class="modal-backdrop" (click)="selectedJobId.set(null)">
+    <section class="modal details-modal" role="dialog" aria-modal="true" aria-labelledby="details-title" (click)="$event.stopPropagation()">
+      <header>
+        <div><span class="modal-icon"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg></span><div><h2 id="details-title">{{ job.title }}</h2><p>{{ statusLabel(job.status) }} · {{ job.progress | number:'1.0-1' }}%</p></div></div>
+        <button class="icon-button" type="button" aria-label="Close" (click)="selectedJobId.set(null)"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+      </header>
+      <dl class="detail-grid">
+        <div><dt>File</dt><dd>{{ job.currentFile || '—' }}</dd></div>
+        <div><dt>Speed</dt><dd>{{ job.speed || '—' }}</dd></div>
+        <div><dt>ETA</dt><dd>{{ job.eta || '—' }}</dd></div>
+      </dl>
+      <div class="log-heading"><span>Live log</span><span>{{ job.logs.length }} lines</span></div>
+      <pre class="log-view">@for (line of job.logs; track $index) {{{ line }}
+}</pre>
+      <footer>
+        <span>{{ job.message }}</span>
+        <div>
+          @if (!finished(job)) { <button class="danger-button" type="button" (click)="cancel(job); selectedJobId.set(null)">Cancel download</button> }
+          @else if (job.status !== 'COMPLETED') { <button class="primary-button compact" type="button" (click)="retry(job); selectedJobId.set(null)">Retry download</button> }
+        </div>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (toast(); as item) {
+  <div class="toast" [class.error]="item.kind === 'error'">
+    @if (item.kind === 'success') { <svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg> }
+    @else { <svg viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4.2 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></svg> }
+    <span>{{ item.message }}</span>
+    <button type="button" aria-label="Dismiss" (click)="toast.set(null)">×</button>
+  </div>
+}

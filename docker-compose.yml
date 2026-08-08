@@ -1,0 +1,33 @@
+name: download-studio
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: download-studio:1.0.0
+    container_name: download-studio
+    ports:
+      - "127.0.0.1:${DOWNLOAD_STUDIO_PORT:-8080}:8080"
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      PORT: 8080
+      DOWNLOAD_SCRIPT: /app/download_single.sh
+      DOWNLOAD_DIRECTORY: /downloads
+      DOWNLOAD_HISTORY: /data/history.json
+    volumes:
+      - type: bind
+        source: ${DOWNLOAD_DIR:-./downloads}
+        target: /downloads
+      - download-studio-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  download-studio-data:

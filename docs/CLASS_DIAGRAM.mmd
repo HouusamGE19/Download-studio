@@ -1,0 +1,352 @@
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#eef8f2", "primaryTextColor": "#173326", "primaryBorderColor": "#2e8b5b", "lineColor": "#517262", "secondaryColor": "#f2f5f3", "tertiaryColor": "#eaf0ed", "fontFamily": "Inter, Segoe UI, Arial, sans-serif"}}}%%
+classDiagram
+direction LR
+
+namespace Angular_Frontend {
+    class AppComponent {
+        <<Angular component>>
+        -FormBuilder fb
+        +AngularDownloadService downloads
+        +FormGroup form
+        +Signal submitting
+        +Signal listing
+        +Signal selectedJob
+        +Signal toast
+        +Signal darkTheme
+        +ngOnInit() Promise~void~
+        +submit() Promise~void~
+        +cancel(job) Promise~void~
+        +retry(job) Promise~void~
+        +clearFinished() Promise~void~
+        +browse(path) Promise~void~
+        +createFolder() Promise~void~
+        +toggleTheme() void
+    }
+
+    class AngularDownloadService["DownloadService (Angular)"] {
+        <<Angular service>>
+        -HttpClient http
+        -EventSource events
+        +Signal~List~DownloadJobDTO~~ jobs
+        +Signal connected
+        +Signal~SystemStatusDTO~ system
+        +initialize() Promise~void~
+        +start(url, directory, browser) Promise~DownloadJobDTO~
+        +cancel(id) Promise~DownloadJobDTO~
+        +retry(id) Promise~DownloadJobDTO~
+        +clearFinished() Promise~void~
+        +browse(path) Promise~DirectoryListingDTO~
+        +createFolder(parent, name) Promise~DirectoryListingDTO~
+        -connectEvents() void
+        -notify(job) void
+    }
+
+    class DownloadJobDTO["DownloadJob"] {
+        <<TypeScript interface>>
+        +string id
+        +string url
+        +string outputDirectory
+        +string browser
+        +DownloadStatusDTO status
+        +number progress
+        +string title
+        +string speed
+        +string eta
+        +string currentFile
+        +string message
+        +string createdAt
+        +string startedAt
+        +string finishedAt
+        +List~string~ logs
+    }
+
+    class DownloadStatusDTO["DownloadStatus"] {
+        <<TypeScript union>>
+        QUEUED
+        DOWNLOADING
+        PROCESSING
+        COMPLETED
+        FAILED
+        CANCELED
+    }
+
+    class SystemStatusDTO["SystemStatus"] {
+        <<TypeScript interface>>
+        +boolean ready
+        +boolean ytDlp
+        +boolean ffmpeg
+        +boolean script
+        +string defaultDirectory
+        +string message
+    }
+
+    class DirectoryEntryDTO["DirectoryEntry"] {
+        <<TypeScript interface>>
+        +string name
+        +string path
+        +boolean readable
+        +boolean writable
+    }
+
+    class DirectoryListingDTO["DirectoryListing"] {
+        <<TypeScript interface>>
+        +string current
+        +string parent
+        +boolean writable
+        +List~DirectoryEntryDTO~ directories
+    }
+}
+
+namespace Spring_API {
+    class DownloadController {
+        <<REST controller>>
+        -DownloadService downloads
+        -DownloadEventHub events
+        +list() List~DownloadSnapshot~
+        +get(id) DownloadSnapshot
+        +create(request) DownloadSnapshot
+        +cancel(id) DownloadSnapshot
+        +retry(id) DownloadSnapshot
+        +clearFinished() Map
+        +events() SseEmitter
+    }
+
+    class DirectoryController {
+        <<REST controller>>
+        +browse(path) DirectoryListing
+        +create(request) DirectoryListing
+        -normalize(path) Path
+    }
+
+    class SystemController {
+        <<REST controller>>
+        -DownloadService downloads
+        -Path defaultDirectory
+        +status() SystemStatus
+        -executableExists(command) boolean
+    }
+
+    class ApiExceptionHandler {
+        <<REST advice>>
+        +invalid(error) ResponseEntity
+        +invalidBody(error) ResponseEntity
+        +disconnectedClient() void
+        +unexpected(error) ResponseEntity
+    }
+
+    class SpaController {
+        <<MVC controller>>
+        +index() String
+    }
+
+    class WebConfig {
+        <<configuration>>
+        +addCorsMappings(registry) void
+    }
+
+    class DirectoryEntry {
+        <<Java record>>
+        +String name
+        +String path
+        +boolean readable
+        +boolean writable
+    }
+
+    class DirectoryListing {
+        <<Java record>>
+        +String current
+        +String parent
+        +boolean writable
+        +List~DirectoryEntry~ directories
+    }
+
+    class CreateDirectoryRequest {
+        <<Java record>>
+        +String parent
+        +String name
+    }
+
+    class SystemStatus {
+        <<Java record>>
+        +boolean ready
+        +boolean ytDlp
+        +boolean ffmpeg
+        +boolean script
+        +String defaultDirectory
+        +String message
+    }
+}
+
+namespace Spring_Download_Domain {
+    class DownloadService {
+        <<Spring service>>
+        -Map~UUID_DownloadJob~ jobs
+        -Map~UUID_Process~ processes
+        -ExecutorService queue
+        -DownloadEventHub eventHub
+        -HistoryStore historyStore
+        -Path scriptPath
+        +create(request) DownloadSnapshot
+        +list() List~DownloadSnapshot~
+        +get(id) DownloadSnapshot
+        +cancel(id) DownloadSnapshot
+        +retry(id) DownloadSnapshot
+        +clearFinished() void
+        +scriptPath() Path
+        -execute(job) void
+        -parseOutput(job, line) void
+        -persist() void
+        -shutdown() void
+    }
+
+    class DownloadJob {
+        <<domain entity>>
+        +UUID id
+        +String url
+        +String outputDirectory
+        +String browser
+        +DownloadStatus status
+        +double progress
+        +String title
+        +String speed
+        +String eta
+        +String currentFile
+        +String message
+        +Instant createdAt
+        +Instant startedAt
+        +Instant finishedAt
+        +Deque~String~ logs
+        +addLog(line) void
+        +snapshot() DownloadSnapshot
+    }
+
+    class DownloadRequest {
+        <<Java record>>
+        +String url
+        +String outputDirectory
+        +String browser
+    }
+
+    class DownloadSnapshot {
+        <<Java record>>
+        +UUID id
+        +String url
+        +String outputDirectory
+        +String browser
+        +DownloadStatus status
+        +double progress
+        +String title
+        +String speed
+        +String eta
+        +String currentFile
+        +String message
+        +Instant createdAt
+        +Instant startedAt
+        +Instant finishedAt
+        +List~String~ logs
+    }
+
+    class DownloadStatus {
+        <<enumeration>>
+        QUEUED
+        DOWNLOADING
+        PROCESSING
+        COMPLETED
+        FAILED
+        CANCELED
+        +isFinished() boolean
+    }
+
+    class DownloadEventHub {
+        <<Spring component>>
+        -List~SseEmitter~ emitters
+        +subscribe(initialJobs) SseEmitter
+        +publish(job) void
+    }
+
+    class HistoryStore {
+        <<Spring component>>
+        -ObjectMapper objectMapper
+        -Path historyFile
+        +load() List~DownloadSnapshot~
+        +save(snapshots) void
+    }
+}
+
+namespace External_Runtime {
+    class DownloadScript["download_single.sh"] {
+        <<shell process>>
+        +run(url, outputDirectory, browser)
+        +emitProgress()
+    }
+
+    class YtDlp["yt-dlp"] {
+        <<external executable>>
+        +downloadMedia()
+        +emitStructuredProgress()
+    }
+
+    class FFmpeg {
+        <<external executable>>
+        +mergeVideoAndAudio()
+        +embedMetadata()
+    }
+
+    class HistoryFile["/data/history.json"] {
+        <<persistent JSON>>
+    }
+
+    class DownloadsDirectory["/downloads"] {
+        <<bind-mounted directory>>
+    }
+}
+
+AppComponent --> AngularDownloadService : uses
+AppComponent ..> DownloadJobDTO : displays/actions
+AppComponent ..> DirectoryListingDTO : folder picker
+AngularDownloadService o-- DownloadJobDTO : reactive jobs
+AngularDownloadService o-- SystemStatusDTO : readiness
+AngularDownloadService ..> DirectoryListingDTO : requests
+DownloadJobDTO --> DownloadStatusDTO : has status
+DirectoryListingDTO *-- "0..250" DirectoryEntryDTO : directories
+
+AngularDownloadService ..> DownloadController : REST + SSE
+AngularDownloadService ..> DirectoryController : REST
+AngularDownloadService ..> SystemController : REST
+
+DownloadController --> DownloadService : delegates
+DownloadController --> DownloadEventHub : subscribes
+DownloadController ..> DownloadRequest : accepts
+DownloadController ..> DownloadSnapshot : returns
+DirectoryController *-- DirectoryEntry : defines
+DirectoryController *-- DirectoryListing : defines
+DirectoryController *-- CreateDirectoryRequest : defines
+SystemController --> DownloadService : checks script
+SystemController *-- SystemStatus : defines
+ApiExceptionHandler ..> DownloadController : handles API errors
+ApiExceptionHandler ..> DirectoryController : handles API errors
+WebConfig ..|> WebMvcConfigurer : implements
+SpaController ..> AppComponent : serves Angular SPA
+
+DownloadService *-- "0..50" DownloadJob : manages
+DownloadService --> DownloadEventHub : publishes
+DownloadService --> HistoryStore : persists through
+DownloadService ..> DownloadRequest : validates
+DownloadService ..> DownloadSnapshot : returns
+DownloadService ..> DownloadScript : starts via ProcessBuilder
+DownloadJob --> DownloadStatus : current state
+DownloadJob ..> DownloadRequest : constructed from
+DownloadJob ..> DownloadSnapshot : creates
+DownloadSnapshot --> DownloadStatus : contains
+DownloadEventHub o-- "0..*" SseEmitter : active clients
+HistoryStore o-- "0..50" DownloadSnapshot : serializes
+HistoryStore --> HistoryFile : reads/writes
+
+DownloadScript --> YtDlp : invokes
+DownloadScript --> DownloadsDirectory : writes media
+YtDlp --> FFmpeg : merge/post-process
+
+DownloadSnapshot ..> DownloadJobDTO : JSON representation
+SystemStatus ..> SystemStatusDTO : JSON representation
+DirectoryListing ..> DirectoryListingDTO : JSON representation
+

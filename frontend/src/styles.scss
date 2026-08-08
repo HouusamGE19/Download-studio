@@ -1,0 +1,65 @@
+:root {
+  color-scheme: dark;
+  --bg: #090a0f;
+  --bg-soft: #101117;
+  --surface: rgba(20, 21, 29, .76);
+  --surface-solid: #15161d;
+  --surface-hover: rgba(255, 255, 255, .055);
+  --border: rgba(255, 255, 255, .09);
+  --border-strong: rgba(255, 255, 255, .15);
+  --text: #f5f3ef;
+  --muted: #9797a2;
+  --subtle: #6f707c;
+  --accent: #ff7448;
+  --accent-2: #ff9a56;
+  --accent-soft: rgba(255, 116, 72, .13);
+  --green: #61d69a;
+  --green-soft: rgba(97, 214, 154, .12);
+  --red: #ff6678;
+  --shadow: 0 28px 90px rgba(0, 0, 0, .38);
+  --radius: 24px;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f0eb;
+  --bg-soft: #e9e6df;
+  --surface: rgba(255, 255, 255, .72);
+  --surface-solid: #fbfaf7;
+  --surface-hover: rgba(31, 28, 24, .045);
+  --border: rgba(42, 36, 31, .1);
+  --border-strong: rgba(42, 36, 31, .17);
+  --text: #211f1c;
+  --muted: #74716c;
+  --subtle: #9b9790;
+  --accent-soft: rgba(230, 83, 37, .1);
+  --green: #24875d;
+  --green-soft: rgba(36, 135, 93, .1);
+  --red: #d64459;
+  --shadow: 0 28px 90px rgba(54, 43, 30, .13);
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; background: var(--bg); scroll-behavior: smooth; }
+body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--text); }
+button, input, select { font: inherit; }
+button { color: inherit; }
+::selection { color: #fff; background: var(--accent); }
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  content: "";
+  opacity: .35;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(to bottom, #000, transparent 68%);
+}
+
+svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

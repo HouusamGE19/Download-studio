@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+target/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+downloads/*
+!downloads/.gitkeep
+artifacts/**/*.tar
+artifacts/**/*.tar.sha256
+.idea/
+.vscode/
+*.iml
+*.log
+*.orig
+*.rej

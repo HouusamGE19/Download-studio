@@ -1,0 +1,13 @@
+.git
+.agents
+.codex
+frontend/node_modules
+frontend/dist
+target
+downloads
+docs
+artifacts
+**/*.log
+**/.DS_Store
+*.orig
+*.rej
