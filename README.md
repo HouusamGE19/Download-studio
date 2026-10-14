@@ -379,4 +379,6 @@ Job metadata and media files have different lifecycle requirements. A Docker vol
 
 ## License
 
-No license has been added yet.
+This project is licensed under the [MIT License](LICENSE).
+
+Third-party components such as `yt-dlp` and FFmpeg remain subject to their own respective licenses.
