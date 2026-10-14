@@ -1,119 +1,327 @@
 # Download Studio
 
-A Docker-first Angular + Spring Boot interface for `download_single.sh`.
+**Local-first video download manager built with Spring Boot, Angular, yt-dlp, FFmpeg and Docker.**
 
-The downloader script is included in the project root, making the directory self-contained and portable.
+Download Studio turns a command-line media workflow into a polished local application with a download queue, live progress, persistent history, cancel/retry controls and portable Docker packaging.
+
+> Download Studio is intended for media you own, have permission to download, or that is otherwise legally available for download. Users are responsible for complying with applicable platform terms and copyright law.
+
+![Download Studio — active download](docs/screenshots/01-download-in-progress.png)
+
+## What this project demonstrates
+
+- Java 17 + Spring Boot 4.1
+- Angular frontend
+- REST API for download lifecycle management
+- Server-Sent Events (SSE) for live job updates
+- `yt-dlp` process orchestration
+- FFmpeg media processing
+- download queue with progress, speed and ETA
+- cancel and retry operations
+- persistent download history
+- browser notifications on completion/failure
+- dark/light theme support
+- Docker multi-stage build
+- loopback-only container exposure by default
+- non-root container runtime
+- read-only container filesystem
+- dropped Linux capabilities and `no-new-privileges`
+- bind-mounted download output
+- portable Docker image export with SHA-256 verification
+
+## Product walkthrough
+
+### Live download queue
+
+Submitting a URL creates a download job in Spring Boot. The Angular UI receives real-time updates over SSE and displays progress, speed, ETA and job status.
+
+![Download Studio — live download](docs/screenshots/01-download-in-progress.png)
+
+### Queue and persistent history
+
+Completed jobs remain visible alongside active work, while new jobs are added to the same activity view.
+
+![Download Studio — queue and history](docs/screenshots/02-queue-and-history.png)
+
+### Completed downloads
+
+The finished state provides a clean history of completed jobs while the live SSE connection remains active.
+
+![Download Studio — completed jobs](docs/screenshots/03-downloads-completed.png)
+
+### Files written to the host
+
+In Docker mode, completed media is written through the `/downloads` bind mount to the host-side `downloads/` directory.
+
+![Download Studio — downloaded files](docs/screenshots/04-downloaded-files.png)
+
+## How it works
+
+```text
+Browser / Angular
+       |
+       | REST
+       v
+Spring Boot API
+       |
+       | create / cancel / retry
+       v
+Download service
+       |
+       | launches
+       v
+download_single.sh
+       |
+       +--> yt-dlp
+       |
+       +--> FFmpeg
+       |
+       v
+/downloads
+       |
+       +--------------------+
+       |                    |
+       | SSE job updates    | persisted history
+       v                    v
+Angular activity UI     history.json
+```
+
+The frontend uses REST for commands and a long-lived Server-Sent Events connection for job updates.
+
+Typical lifecycle:
+
+```text
+URL submitted
+    ↓
+QUEUED
+    ↓
+DOWNLOADING
+    ↓
+PROCESSING
+    ↓
+COMPLETED
+```
+
+Jobs can also transition to `FAILED` or `CANCELED`. Failed/canceled jobs can be retried from the UI.
+
+## Stack
+
+| Layer | Technology |
+| --- | --- |
+| Backend | Java 17, Spring Boot 4.1 |
+| Frontend | Angular |
+| Live updates | Server-Sent Events |
+| Download engine | yt-dlp |
+| Media processing | FFmpeg |
+| Packaging | Docker / Docker Compose |
+| Build | Maven, npm |
+| Persistence | JSON download history + host download directory |
 
 ## Quick start with Docker
 
-Docker with the Compose plugin is the only requirement for normal use.
+For normal use, Docker with the Compose plugin is the only host requirement.
 
 ```bash
 docker compose up --build -d
 ```
 
-Open <http://127.0.0.1:8080>. Downloads are saved automatically in the
-`downloads/` directory beside `docker-compose.yml`; the application does not
-browse the server or client filesystem.
+Open:
+
+```text
+http://127.0.0.1:8080
+```
+
+Downloads are saved automatically in:
+
+```text
+./downloads/
+```
+
+Stop the application with:
+
+```bash
+docker compose down
+```
+
+Check status or logs with:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 app
+```
+
+## Docker design
+
+The production image uses a multi-stage build:
+
+```text
+Node 24
+  ↓
+Angular production build
+
+Maven + Java 17
+  ↓
+Spring Boot JAR
+
+Runtime image
+  ├── Java 17 JRE
+  ├── yt-dlp
+  ├── FFmpeg
+  ├── Python 3
+  ├── tini
+  └── packaged application
+```
+
+The default Compose configuration deliberately keeps the application local:
+
+```yaml
+ports:
+  - "127.0.0.1:8080:8080"
+```
+
+Additional runtime hardening includes:
+
+- application runs as an unprivileged user
+- container root filesystem is read-only
+- all Linux capabilities are dropped
+- `no-new-privileges` is enabled
+- temporary writable space is provided through `tmpfs`
+- downloads are written through a dedicated bind mount
+- history is stored in a dedicated Docker volume
+
+The application UI does not expose a general-purpose server filesystem browser.
+
+## API
+
+Download lifecycle:
+
+```text
+GET    /api/downloads
+GET    /api/downloads/{id}
+POST   /api/downloads
+POST   /api/downloads/{id}/cancel
+POST   /api/downloads/{id}/retry
+DELETE /api/downloads/finished
+GET    /api/downloads/events
+```
+
+System readiness:
+
+```text
+GET /api/system/status
+```
+
+The status endpoint verifies the availability of `yt-dlp`, `ffmpeg` and the configured download script.
 
 ## Development
 
-Source development requires Java 17+, Node.js 24+, `yt-dlp`, and `ffmpeg`.
-Run `./mvnw spring-boot:run`, then run `npm install && npm start` inside `frontend/`. The development UI at <http://127.0.0.1:4200> proxies API calls to Spring Boot.
+Source development requires:
 
-Configuration environment variables:
+- Java 17+
+- Node.js 24+
+- `yt-dlp`
+- FFmpeg
 
-- `PORT` changes the Spring port (default `8080`).
-- `DOWNLOAD_SCRIPT` points to a different downloader script.
-- `DOWNLOAD_HISTORY` changes the history JSON location.
-- `DOWNLOAD_DIRECTORY` changes the native-app output directory.
+Run the Spring Boot backend:
 
-Recent activity is stored at `~/.download-studio/history.json`.
+```bash
+./mvnw spring-boot:run
+```
+
+On Windows:
+
+```cmd
+mvnw.cmd spring-boot:run
+```
+
+Then start Angular from another terminal:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Open:
+
+```text
+http://127.0.0.1:4200
+```
+
+The Angular development server proxies API requests to Spring Boot.
 
 ## Build after code changes
 
-Build the Angular frontend first, then package the Spring Boot backend so the
-generated JAR contains the latest frontend files:
+Build Angular first:
 
 ```bash
 cd frontend
 npm ci
 npm run build
 cd ..
+```
 
+Then package Spring Boot:
+
+```bash
 ./mvnw clean package
 ```
 
-The executable JAR is written to `target/download-studio-1.0.0.jar`. Run it
-from the project root:
+The executable JAR is created at:
+
+```text
+target/download-studio-1.0.0.jar
+```
+
+Run it from the project root:
 
 ```bash
 java -jar target/download-studio-1.0.0.jar
 ```
 
-For faster development, run `npm start` in `frontend/` for Angular live reload
-and run `./mvnw spring-boot:run` in the project root for the backend. Restart
-the backend after Java changes.
+## Configuration
 
-## Docker
+Supported environment variables include:
 
-Build the image and start the container:
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | Spring Boot port |
+| `DOWNLOAD_SCRIPT` | downloader script path |
+| `DOWNLOAD_HISTORY` | history JSON location |
+| `DOWNLOAD_DIRECTORY` | native application output directory |
+| `DOWNLOAD_DIR` | host directory mapped into Docker |
+| `DOWNLOAD_STUDIO_PORT` | host port used by Docker Compose |
 
-```bash
-docker compose up --build -d
-```
-
-Compose creates `downloads/` automatically when it does not exist. To map a
-different host folder, set `DOWNLOAD_DIR` in `.env` (which is intentionally not
-committed) or in the command environment.
-
-Check or stop the container:
+For Docker, copy the example environment file if you want a custom download directory:
 
 ```bash
-docker compose ps
-docker compose logs --tail=100 app
-docker compose down
+cp .env.example .env
 ```
 
-### Rebuild the image after code changes
+Example:
 
-The Docker build compiles both the latest Angular frontend and Spring Boot
-backend. Rebuild the image and replace the running container with:
-
-```bash
-docker compose build --pull --no-cache app
-docker compose up -d --force-recreate app
+```dotenv
+DOWNLOAD_DIR=/absolute/path/to/videos
+DOWNLOAD_STUDIO_PORT=8080
 ```
 
-Verify the recreated container:
+## Portable Docker bundle
 
-```bash
-docker compose ps
-docker compose logs --tail=100 app
-```
-
-The Docker image includes the `download_single.sh` file from the project root.
-
-Container recreation preserves the downloads bind mount and history volume.
-Do not run `docker compose down -v` unless you intentionally want to delete the
-saved history volume.
-
-## Portable bundle
-
-Create a current image archive and ready-to-copy bundle:
+The project can export a self-contained Docker image bundle for another computer:
 
 ```bash
 ./export-image.sh
 ```
 
-Copy the contents of `artifacts/portable/` to the other computer. Its bare
-minimum is:
+The generated bundle under `artifacts/portable/` contains:
 
-- `download-studio-1.0.0.tar`
-- `download-studio-1.0.0.tar.sha256`
-- `docker-compose.yml`
+```text
+download-studio-1.0.0.tar
+download-studio-1.0.0.tar.sha256
+docker-compose.yml
+```
 
-On the destination computer, run:
+On the destination machine:
 
 ```bash
 sha256sum --check download-studio-1.0.0.tar.sha256
@@ -121,17 +329,54 @@ docker load --input download-studio-1.0.0.tar
 docker compose up -d
 ```
 
-On Windows 11, use Docker Desktop and run the Docker commands above in
-PowerShell. To verify the archive there, compare the output of
-`Get-FileHash .\download-studio-1.0.0.tar -Algorithm SHA256` with the hash in
-`download-studio-1.0.0.tar.sha256`. The `downloads` directory is created
-automatically on first start.
+The destination computer needs Docker with Compose, but does not need the source code, Java, Node.js, `yt-dlp` or FFmpeg installed separately.
 
-The destination needs Docker with Compose, but it does not need the source
-code, Java, Node.js, `yt-dlp`, or `ffmpeg`.
+> The exported image targets the CPU architecture of the machine that builds it. Rebuild the image when moving between incompatible architectures such as `amd64` and ARM.
+
+## Repository layout
+
+```text
+.
+├── frontend/                    # Angular application
+├── src/                         # Spring Boot backend
+├── docs/                        # diagrams and technical guides
+├── artifacts/portable/          # generated portable image bundle
+├── downloads/                   # host-side download output
+├── download_single.sh           # yt-dlp / FFmpeg orchestration
+├── docker-compose.yml
+├── docker-compose.portable.yml
+├── Dockerfile
+├── export-image.sh
+├── pom.xml
+└── README.md
+```
 
 ## Documentation
 
-- Technical documentation, diagrams, and the PDF handbook are under [`docs/`](docs/).
-- Portable Docker image archives and checksums are generated under `artifacts/portable/`.
-- Run `./export-image.sh` when a new portable image archive is required.
+Additional technical material is available under [`docs/`](docs/):
+
+- class diagram and Mermaid source
+- Docker usage guide
+- detailed Docker technical guide
+- PDF technical handbook
+
+## Engineering decisions worth discussing
+
+**Why SSE instead of WebSocket?**  
+The browser primarily needs one-way server-to-client progress events. SSE keeps the real-time channel simple and works over normal HTTP.
+
+**Why wrap yt-dlp instead of reimplementing downloading logic?**  
+The project focuses on application orchestration, job lifecycle, UI state and packaging while delegating media extraction to a mature specialized tool.
+
+**Why bind to `127.0.0.1` by default?**  
+This is designed as a local application. Loopback-only publishing avoids exposing the service to the local network unless the operator deliberately changes the configuration.
+
+**Why use a host bind mount for downloads?**  
+Completed files should survive container recreation and remain immediately accessible from the host.
+
+**Why persist history separately from downloaded media?**  
+Job metadata and media files have different lifecycle requirements. A Docker volume stores history while the bind mount exposes completed media directly to the user.
+
+## License
+
+No license has been added yet.
